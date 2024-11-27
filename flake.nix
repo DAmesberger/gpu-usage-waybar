@@ -14,7 +14,7 @@
       # Package definition
       packages.default = rustPlatform.buildRustPackage {
         pname = "gpu-usage-waybar";
-        version = "0.1.12";
+        version = "0.1.0";
 
         # Include the entire directory as the source
         src = ./.;
@@ -29,12 +29,16 @@
         };
       };
 
-      # NixOS module definition
-      nixosModules.rustProject = { config, pkgs, ... }: {
-        config = {
-          environment.systemPackages = [ self.packages.${system}.default ];
-          environment.variables.LD_LIBRARY_PATH = "/run/opengl-driver/lib";
-        };
+      # Export the NixOS module as the default
+      nixosModule = {
+        imports = [
+          {
+            config = {
+              environment.systemPackages = [ self.packages.${system}.default ];
+              environment.variables.LD_LIBRARY_PATH = "/run/opengl-driver/lib";
+            };
+          }
+        ];
       };
     });
 }
