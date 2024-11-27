@@ -1,44 +1,36 @@
 {
   description = "gpu-usage-waybar";
-
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
   };
-
-  outputs = { self, nixpkgs, flake-utils }:
-    flake-utils.lib.eachDefaultSystem (system: let
-      pkgs = import nixpkgs { inherit system; };
-      rustPlatform = pkgs.rustPlatform;
-    in {
-      # Package definition
-      packages.default = rustPlatform.buildRustPackage {
+  outputs = { self, nixpkgs }: {
+    packages = {
+      x86_64-linux = let
+        pkgs = import nixpkgs {
+          system = "x86_64-linux";
+        };
+        rustPlatform = pkgs.rustPlatform;
+      in rustPlatform.buildRustPackage {
         pname = "gpu-usage-waybar";
-        version = "0.1.0";
-
-        # Include the entire directory as the source
+        version = "0.1.12";
         src = ./.;
-
-        # Replace cargoSha256 with cargoHash
-        cargoHash = "sha256-68uQNqa8vrKzYrt/Wmf7cNnLNSRa6GGT7OZDd8hJ4HU=";
-
+        cargoHash = "sha256-q8fxOetIhh1vZi/KVO+yur99yfzycizYUSdqC7cV48I=";
         meta = with pkgs.lib; {
           description = "Add GPU usage to Waybar";
           license = licenses.mit;
           maintainers = [ "Daniel Amesberger" ];
         };
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postFixup = ''
+          wrapProgram $out/bin/gpu-usage-waybar \
+            --prefix LD_LIBRARY_PATH : /run/opengl-driver/lib
+        '';
       };
-
-      # Export the NixOS module as the default
-      nixosModule = {
-        imports = [
-          {
-            config = {
-              environment.systemPackages = [ self.packages.${system}.default ];
-              environment.variables.LD_LIBRARY_PATH = "/run/opengl-driver/lib";
-            };
-          }
-        ];
-      };
-    });
+    };
+    nixosModules.default = { config, ... }: {
+      config.environment.systemPackages = [
+        self.packages.${config.system}
+      ];
+    };
+  };
 }
